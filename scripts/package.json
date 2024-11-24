@@ -1,0 +1,19 @@
+{
+  "name": "db-scripts",
+  "version": "1.0.0",
+  "description": "Database inspection scripts",
+  "scripts": {
+    "inspect": "ts-node inspect_schema.ts",
+    "inspect-db": "node inspect_db.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "dotenv": "^16.3.1",
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.4",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.3.3"
+  }
+}

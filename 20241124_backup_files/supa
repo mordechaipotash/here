@@ -1,0 +1,124 @@
+-- Enable UUID extension if not already enabled
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Create admin_users table
+CREATE TABLE IF NOT EXISTS public.admin_users (
+    user_id UUID PRIMARY KEY REFERENCES auth.users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add RLS to admin_users
+ALTER TABLE public.admin_users ENABLE ROW LEVEL SECURITY;
+
+-- Only super admins can manage admin_users
+CREATE POLICY "Only super admins can manage admin_users"
+    ON public.admin_users
+    FOR ALL
+    TO authenticated
+    USING (auth.jwt() ->> 'email' = 'mordechai@codeium.com');
+
+-- Create form types table
+CREATE TABLE IF NOT EXISTS public.form_types (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    description TEXT,
+    identification_rules JSONB,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Create form classifications table
+CREATE TABLE IF NOT EXISTS public.form_classifications (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    attachment_id UUID REFERENCES public.attachments(id),
+    form_type_id UUID REFERENCES public.form_types(id),
+    confidence_score FLOAT,
+    ocr_text TEXT,
+    extracted_data JSONB,
+    manual_override BOOLEAN DEFAULT FALSE,
+    last_modified_by UUID REFERENCES auth.users(id),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add form_classification_id to attachments
+ALTER TABLE public.attachments
+    ADD COLUMN IF NOT EXISTS form_classification_id UUID REFERENCES public.form_classifications(id);
+
+-- Create indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_form_classifications_attachment_id ON public.form_classifications(attachment_id);
+CREATE INDEX IF NOT EXISTS idx_form_classifications_form_type_id ON public.form_classifications(form_type_id);
+CREATE INDEX IF NOT EXISTS idx_attachments_form_classification_id ON public.attachments(form_classification_id);
+
+-- Add RLS policies
+ALTER TABLE public.form_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.form_classifications ENABLE ROW LEVEL SECURITY;
+
+-- Form types policies
+CREATE POLICY "Allow read access to all authenticated users"
+    ON public.form_types
+    FOR SELECT
+    TO authenticated
+    USING (true);
+
+CREATE POLICY "Allow write access to admin users only"
+    ON public.form_types
+    FOR ALL
+    TO authenticated
+    USING (
+        auth.uid() IN (
+            SELECT user_id FROM public.admin_users
+            UNION
+            -- Fallback to email check for initial setup
+            SELECT id FROM auth.users 
+            WHERE email = 'mordechai@codeium.com'
+        )
+    );
+
+-- Form classifications policies
+CREATE POLICY "Allow read access to own classifications"
+    ON public.form_classifications
+    FOR SELECT
+    TO authenticated
+    USING (
+        attachment_id IN (
+            SELECT a.id 
+            FROM public.attachments a
+            JOIN public.emails e ON e.email_id = a.email_id
+            WHERE e.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Allow update access to own classifications"
+    ON public.form_classifications
+    FOR UPDATE
+    TO authenticated
+    USING (
+        attachment_id IN (
+            SELECT a.id 
+            FROM public.attachments a
+            JOIN public.emails e ON e.email_id = a.email_id
+            WHERE e.user_id = auth.uid()
+        )
+    );
+
+-- Create updated_at trigger function
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- Add triggers for updated_at
+CREATE TRIGGER update_form_types_updated_at
+    BEFORE UPDATE ON public.form_types
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_form_classifications_updated_at
+    BEFORE UPDATE ON public.form_classifications
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
