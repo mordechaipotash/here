@@ -42,7 +42,6 @@ CREATE TABLE IF NOT EXISTS public.emails (
 
 -- Create indexes for emails
 CREATE INDEX IF NOT EXISTS idx_emails_message_id ON public.emails(message_id);
-CREATE INDEX IF NOT EXISTS idx_emails_thread_id ON public.emails(thread_id);
 CREATE INDEX IF NOT EXISTS idx_emails_client_ref_id ON public.emails(client_ref_id);
 CREATE INDEX IF NOT EXISTS idx_emails_received_at ON public.emails(received_at);
 

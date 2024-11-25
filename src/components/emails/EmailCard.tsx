@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { format, formatDistanceToNow } from 'date-fns'
+import { formatInTimeZone } from 'date-fns-tz'
 import { motion, AnimatePresence } from 'framer-motion'
 import { DocumentIcon, ChevronDownIcon, ArrowPathIcon } from '@heroicons/react/24/outline'
 import clsx from 'clsx'
 import type { EmailWithMetadata } from '@/types/email-view'
-import { PdfGalleryModal } from './PdfGalleryModal'
+import PdfGalleryModal from './PdfGalleryModal'
 import { sanitizeHtml } from '@/utils/sanitizeHtml'
 import { updateTrack } from '@/services/emailViewService'
 
@@ -112,29 +113,47 @@ export default function EmailCard({ email, onTrackChange }: EmailCardProps) {
         >
           <div className="flex items-center justify-between">
             <div className="min-w-0 flex-1">
-              <div className="flex items-center space-x-3">
-                <div 
-                  className="flex-shrink-0 w-2.5 h-2.5 rounded-full" 
-                  style={{ backgroundColor: email.client.color }} 
-                />
-                <span className="block text-sm font-medium text-gray-900 truncate">
-                  {email.client.name}
-                </span>
+              {/* Client Info and Date */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div 
+                    className="flex-shrink-0 w-2.5 h-2.5 rounded-full" 
+                    style={{ backgroundColor: email.client.color }} 
+                  />
+                  <span className="block text-sm font-medium text-gray-900 truncate">
+                    {email.client.name}
+                  </span>
+                </div>
+                <div className="text-sm text-gray-500">
+                  {formatInTimeZone(new Date(email.date), 'America/New_York', 'MMM d, yyyy h:mm a zzz')}
+                </div>
               </div>
-              <div className="mt-1 flex items-center space-x-3 text-sm text-gray-500">
-                <span className="truncate">{email.subject || '(no subject)'}</span>
-                <span className="flex-shrink-0">•</span>
-                <span className="flex-shrink-0">
-                  {formatDistanceToNow(new Date(email.date), { addSuffix: true })}
-                </span>
+              
+              {/* Email Subject and From */}
+              <div className="mt-2">
+                <p className="text-sm font-medium text-gray-900">
+                  {email.subject || '(no subject)'}
+                </p>
+                <div className="mt-1 text-sm text-gray-500">
+                  From: {email.from.name || email.from.email}
+                </div>
               </div>
             </div>
+            
+            {/* Right Side Stats */}
             <div className="ml-4 flex items-center space-x-3">
+              {/* PDF Count */}
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {pdfs.length} PDF{pdfs.length !== 1 ? 's' : ''}
+              </span>
+              
+              {/* Form Count */}
               {total8850Forms > 0 && (
                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 whitespace-nowrap">
                   {total8850Forms} 8850 Form{total8850Forms !== 1 ? 's' : ''}
                 </span>
               )}
+              
               <ChevronDownIcon
                 className={clsx(
                   'h-5 w-5 text-gray-400 transform transition-transform duration-200',
@@ -263,6 +282,7 @@ export default function EmailCard({ email, onTrackChange }: EmailCardProps) {
             isOpen={!!selectedPdf}
             onClose={() => setSelectedPdf(null)}
             pdf={selectedPdf}
+            emailId={email.email_id || email.id}
             onFormTypeChange={handleFormTypeChange}
           />
         )}

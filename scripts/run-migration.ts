@@ -4,6 +4,7 @@ const path = require('path');
 const { Pool } = require('pg');
 
 // Load environment variables
+require('dotenv').config({ path: '.env.local' });
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const databaseUrl = process.env.DATABASE_URL;
 
@@ -38,67 +39,42 @@ async function runMigration() {
   const client = await pool.connect();
   
   try {
-    // Check emails table structure
-    const { rows: columns } = await client.query(`
-      SELECT column_name, data_type 
-      FROM information_schema.columns 
-      WHERE table_name = 'emails' 
-      AND table_schema = 'public'
-      ORDER BY ordinal_position;
-    `);
-    
-    console.log('Current emails table structure:', columns);
+    console.log('Running form_classification_rules migration...');
 
-    // Read migration files
-    const migrationsDir = path.join(__dirname, '../supabase/migrations');
-    const files = fs.readdirSync(migrationsDir)
-      .filter(file => file.endsWith('.sql'))
-      .sort();
+    // Read and execute the migration file
+    const migrationPath = path.join(__dirname, '../supabase/migrations/20240304_form_rules.sql');
+    const migrationSql = fs.readFileSync(migrationPath, 'utf8');
 
-    // Create migrations table if it doesn't exist
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS _migrations (
-        name TEXT PRIMARY KEY,
-        executed_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-      );
+    await client.query(migrationSql);
+    console.log('Migration completed successfully');
+
+    // Verify the table was created
+    const { rows: tables } = await client.query(`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public' 
+      AND table_name = 'form_classification_rules';
     `);
 
-    // Execute each migration
-    for (const file of files) {
-      // Check if migration was already executed
-      const { rows } = await client.query(
-        'SELECT name FROM _migrations WHERE name = $1',
-        [file]
-      );
-
-      if (rows.length > 0) {
-        console.log(`Migration ${file} already executed, skipping...`);
-        continue;
-      }
-
-      console.log(`Running migration: ${file}`);
-      const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
+    if (tables.length > 0) {
+      console.log('form_classification_rules table exists');
       
-      // Run the migration in a transaction
-      await client.query('BEGIN');
-      try {
-        await client.query(sql);
-        await client.query(
-          'INSERT INTO _migrations (name) VALUES ($1)',
-          [file]
-        );
-        await client.query('COMMIT');
-        console.log(`Successfully executed migration: ${file}`);
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      }
+      // Check table structure
+      const { rows: columns } = await client.query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'form_classification_rules' 
+        AND table_schema = 'public'
+        ORDER BY ordinal_position;
+      `);
+      
+      console.log('Table structure:', columns);
+    } else {
+      console.error('Table was not created');
     }
 
-    console.log('All migrations completed successfully');
   } catch (error) {
-    console.error('Migration failed:', error);
-    process.exit(1);
+    console.error('Error running migration:', error);
   } finally {
     client.release();
   }

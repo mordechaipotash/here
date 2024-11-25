@@ -101,8 +101,8 @@ export const FormTypeManager = ({ onUpdate }: FormTypeManagerProps) => {
                 name: '',
                 identification_rules: {
                   keywords: [],
-                  patterns: [],
                   required_fields: [],
+                  filename_patterns: [],
                 },
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString(),
@@ -200,12 +200,48 @@ export const FormTypeManager = ({ onUpdate }: FormTypeManagerProps) => {
                       ...selectedType,
                       identification_rules: {
                         ...selectedType.identification_rules,
-                        keywords: e.target.value.split(',').map((k) => k.trim()),
-                      },
+                        keywords: e.target.value.split(',').map(k => k.trim()).filter(Boolean)
+                      }
                     })
                   }
                   className="w-full px-3 py-2 border rounded"
                   placeholder="Enter keywords separated by commas"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Required Fields</label>
+                <input
+                  type="text"
+                  value={selectedType.identification_rules.required_fields.join(', ')}
+                  onChange={(e) =>
+                    setSelectedType({
+                      ...selectedType,
+                      identification_rules: {
+                        ...selectedType.identification_rules,
+                        required_fields: e.target.value.split(',').map(f => f.trim()).filter(Boolean)
+                      }
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded"
+                  placeholder="Enter required fields separated by commas"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Filename Patterns</label>
+                <input
+                  type="text"
+                  value={selectedType.identification_rules.filename_patterns?.join(', ') || ''}
+                  onChange={(e) =>
+                    setSelectedType({
+                      ...selectedType,
+                      identification_rules: {
+                        ...selectedType.identification_rules,
+                        filename_patterns: e.target.value.split(',').map(p => p.trim()).filter(Boolean)
+                      }
+                    })
+                  }
+                  className="w-full px-3 py-2 border rounded"
+                  placeholder="Enter filename patterns separated by commas"
                 />
               </div>
               <div className="flex justify-end space-x-2">
