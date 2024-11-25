@@ -11,28 +11,23 @@ interface EmailListProps {
 
 export function EmailList({ trackFilter }: EmailListProps) {
   const {
-    data: emails = [],
+    data: emails,
     isLoading,
     error
   } = useQuery({
     queryKey: ['emails', trackFilter],
-    queryFn: () => getEmails({ track: trackFilter })
+    queryFn: () => getEmails({ selectedTrack: trackFilter === 'all' ? 'all' : trackFilter.toString() })
   })
 
   if (isLoading) return <LoadingState message="Loading emails..." />
-  if (error) return <ErrorMessage title="Error" message={(error as Error).message} />
+  if (error) return <ErrorMessage error={error} />
+  if (!emails?.length) return <div>No emails found.</div>
 
   return (
-    <div className="grid gap-4">
-      {emails.map(email => (
-        <EmailCard key={email.email_id} email={email} />
+    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+      {emails.map((email) => (
+        <EmailCard key={email.id} email={email} />
       ))}
-      
-      {emails.length === 0 && (
-        <div className="text-center py-12">
-          <p className="text-gray-500">No emails found</p>
-        </div>
-      )}
     </div>
   )
 }

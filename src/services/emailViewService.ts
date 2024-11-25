@@ -18,7 +18,7 @@ export async function getEmails({ selectedTrack }: { selectedTrack?: string | nu
     `)
     .order('date', { ascending: false })
 
-  if (selectedTrack) {
+  if (selectedTrack !== 'all' && selectedTrack !== undefined) {
     query = query.eq('track', selectedTrack)
   }
 
