@@ -1,7 +1,7 @@
 import React from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { getEmails } from '@/services/emailViewService'
-import { EmailCard } from '@/components/emails/EmailCard'
+import EmailCard from '@/components/emails/EmailCard'
 import { LoadingState } from '@/components/ui/loading'
 import { ErrorMessage } from '@/components/ui/error'
 
