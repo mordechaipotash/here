@@ -26,7 +26,7 @@ export function EmailList({ trackFilter }: EmailListProps) {
   return (
     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
       {emails.map((email) => (
-        <EmailCard key={email.id} email={email} />
+        <EmailCard key={email.email_id} email={email} />
       ))}
     </div>
   )
